@@ -123,6 +123,29 @@ app.post('/updatemdpuser', async (req, res) => {
   });
 });
 
+
+// Route pour obtenir les informations de l'utilisateur connecté
+app.get('/user-info', (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Utilisateur non connecté." });
+  }
+
+  const userId = req.session.userId;
+
+  db.query('SELECT prenom, nom, numero_etudiant FROM users_data WHERE id = ?', [userId], (err, results) => {
+    if (err) {
+      return res.status(500).json({ message: "Erreur lors de la récupération des informations de l'utilisateur." });
+    }
+
+    if (results.length > 0) {
+      const userInfo = results[0];
+      res.json(userInfo);
+    } else {
+      res.status(404).json({ message: "Utilisateur non trouvé." });
+    }
+  });
+});
+
 // Routes
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
