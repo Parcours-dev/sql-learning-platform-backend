@@ -13,7 +13,7 @@ var app = express();
 
 // Configuration CORS pour supporter les credentials
 app.use(cors({
-  origin: 'http://localhost:5173', // ou votre URL de front-end
+  origin: 'http://localhost:5173', // URL du Front
   credentials: true,
 }));
 
@@ -42,17 +42,17 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Route de connexion
-app.post('/login', (req, res) => {
+app.post('/login', (req, res)=> {
   const { username, password } = req.body;
-  db.query('SELECT * FROM users_data WHERE username = ?', [username], async (err, results) => {
+  db.query('SELECT * FROM Users WHERE Username = ?', [username], async (err, results) => {
     if (err) {
       return res.status(500).send(err);
     }
     if (results.length > 0) {
       const user = results[0];
-      const comparison = await bcrypt.compare(password, user.password);
+      const comparison = await bcrypt.compare(password, user.PasswordHash);
       if (comparison) {
-        req.session.userId = user.id; // Stockage de l'ID utilisateur dans la session
+        req.session.userId = user.UserID; // Stockage de l'ID utilisateur dans la session
         return res.status(200).json({ message: "Authentification réussie" });
       }
     }
@@ -71,7 +71,7 @@ app.post('/register', async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    db.query('INSERT INTO users_data (username, email, password) VALUES (?, ?, ?)', [username, email, hashedPassword], (err, results) => {
+    db.query('INSERT INTO Users (Username, Email, PasswordHash) VALUES (?, ?, ?)', [username, email, hashedPassword], (err, results) => {
       if (err) {
         return res.status(500).json({ message: "Erreur lors de la création de l'utilisateur." });
       }
@@ -102,7 +102,7 @@ app.post('/updatemdpuser', async (req, res) => {
 
   const userId = req.session.userId;
 
-  db.query('SELECT password FROM users_data WHERE id = ?', [userId], async (err, results) => {
+  db.query('SELECT PasswordHash FROM Users WHERE UserID = ?', [userId], async (err, results) => {
     if (err || results.length === 0) {
       return res.status(500).json({ message: "Erreur lors de la récupération de l'utilisateur." });
     }
@@ -114,7 +114,7 @@ app.post('/updatemdpuser', async (req, res) => {
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-    db.query('UPDATE users_data SET password = ? WHERE id = ?', [hashedNewPassword, userId], (err, results) => {
+    db.query('UPDATE Users SET PasswordHash = ? WHERE UserID = ?', [hashedNewPassword, userId], (err, results) => {
       if (err) {
         return res.status(500).json({ message: "Erreur lors de la mise à jour du mot de passe." });
       }
@@ -132,7 +132,7 @@ app.get('/user-info', (req, res) => {
 
   const userId = req.session.userId;
 
-  db.query('SELECT prenom, nom, numero_etudiant FROM users_data WHERE id = ?', [userId], (err, results) => {
+  db.query('SELECT Username, Email FROM Users WHERE UserID = ?', [userId], (err, results) => {
     if (err) {
       return res.status(500).json({ message: "Erreur lors de la récupération des informations de l'utilisateur." });
     }
@@ -142,6 +142,25 @@ app.get('/user-info', (req, res) => {
       res.json(userInfo);
     } else {
       res.status(404).json({ message: "Utilisateur non trouvé." });
+    }
+  });
+});
+
+
+// Route API pour récupérer les données des employés
+app.get('/tables', async (req, res) => {
+  db.query('SELECT * FROM Employe', (err, results) => {
+    if (err) {
+      // Si une erreur survient lors de la requête, renvoyer un message d'erreur
+      return res.status(500).json({ message: "Erreur lors de la récupération des informations de la table." });
+    }
+
+    if (results.length > 0) {
+      // Si des résultats sont trouvés, les renvoyer tous
+      res.json(results); // Modifié pour renvoyer tous les résultats
+    } else {
+      // Si aucun résultat n'est trouvé, renvoyer un message indiquant que la table est vide
+      res.status(404).json({ message: "Aucune donnée trouvée dans la table Employe." }); // Message mis à jour pour plus de clarté
     }
   });
 });
