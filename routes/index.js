@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
+
 // Route de test avec CORS spécifique
 router.get('/test', (req, res) => {
   res.header('Access-Control-Allow-Origin', '*');

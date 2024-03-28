@@ -4,7 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var cors = require('cors');
-var mysql = require('mysql2');
+var mysql = require('mysql2/promise');
 var bcrypt = require('bcryptjs');
 var session = require('express-session');
 require('dotenv').config();
@@ -31,8 +31,12 @@ const db = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT
+  port: process.env.DB_PORT,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
+
 
 // Middlewares
 app.use(logger('dev'));
@@ -40,25 +44,33 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+
 
 // Route de connexion
-app.post('/login', (req, res)=> {
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  db.query('SELECT * FROM Users WHERE Username = ?', [username], async (err, results) => {
-    if (err) {
-      return res.status(500).send(err);
-    }
+  try {
+    const [results] = await db.query('SELECT * FROM Users WHERE Username = ?', [username]);
     if (results.length > 0) {
       const user = results[0];
       const comparison = await bcrypt.compare(password, user.PasswordHash);
       if (comparison) {
-        req.session.userId = user.UserID; // Stockage de l'ID utilisateur dans la session
+        req.session.userId = user.UserID;
         return res.status(200).json({ message: "Authentification réussie" });
       }
     }
     return res.status(401).json({ message: "Identifiants invalides" });
-  });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send(error);
+  }
 });
+
 
 // Route d'inscription
 app.post('/register', async (req, res) => {
@@ -125,45 +137,80 @@ app.post('/updatemdpuser', async (req, res) => {
 
 
 // Route pour obtenir les informations de l'utilisateur connecté
-app.get('/user-info', (req, res) => {
+app.get('/user-info', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: "Utilisateur non connecté." });
   }
 
   const userId = req.session.userId;
 
-  db.query('SELECT Username, Email FROM Users WHERE UserID = ?', [userId], (err, results) => {
-    if (err) {
-      return res.status(500).json({ message: "Erreur lors de la récupération des informations de l'utilisateur." });
-    }
-
+  try {
+    const [results] = await db.query('SELECT Username, Email FROM Users WHERE UserID = ?', [userId]);
     if (results.length > 0) {
       const userInfo = results[0];
       res.json(userInfo);
     } else {
       res.status(404).json({ message: "Utilisateur non trouvé." });
     }
-  });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur lors de la récupération des informations de l'utilisateur." });
+  }
 });
+
 
 
 // Route API pour récupérer les données des employés
 app.get('/tables', async (req, res) => {
-  db.query('SELECT * FROM Employe', (err, results) => {
-    if (err) {
-      // Si une erreur survient lors de la requête, renvoyer un message d'erreur
-      return res.status(500).json({ message: "Erreur lors de la récupération des informations de la table." });
-    }
-
+  try {
+    const [results] = await db.query('SELECT * FROM Employe');
     if (results.length > 0) {
-      // Si des résultats sont trouvés, les renvoyer tous
-      res.json(results); // Modifié pour renvoyer tous les résultats
+      res.json(results);
     } else {
-      // Si aucun résultat n'est trouvé, renvoyer un message indiquant que la table est vide
-      res.status(404).json({ message: "Aucune donnée trouvée dans la table Employe." }); // Message mis à jour pour plus de clarté
+      res.status(404).json({ message: "Aucune donnée trouvée dans la table Employe." });
     }
-  });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur lors de la récupération des informations de la table." });
+  }
 });
+
+// Envoie du MCD de la base
+
+const mcdData = require('./mcdData');
+app.get('/api/mcd', (req, res) => {
+  res.json(mcdData);
+});
+
+// Récupération des chapitres et infos
+app.get('/api/chapitres', async (req, res) => {
+  try {
+    const [results] = await db.query('SELECT ChapitreID, Nom, Description FROM Chapitre');
+    if (results.length > 0) {
+      res.json(results);
+    } else {
+      res.status(404).json({ message: "Aucun chapitre trouvé." });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur lors de la récupération des chapitres." });
+  }
+});
+
+
+// Récupération des exercices d'un chapitre
+app.get('/api/chapitres/:chapitreId/exercices', async (req, res) => {
+  const { chapitreId } = req.params;
+  try {
+    const [exercices] = await db.query('SELECT * FROM Questions WHERE ChapitreID = ?', [chapitreId] );
+    res.json(exercices);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la récupération des exercices." });
+  }
+});
+
+
 
 // Routes
 var indexRouter = require('./routes/index');
