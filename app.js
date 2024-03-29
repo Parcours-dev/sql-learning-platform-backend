@@ -161,7 +161,7 @@ app.get('/user-info', async (req, res) => {
 
 
 // Route API pour récupérer les données des employés
-app.get('/tables', async (req, res) => {
+app.get('/tables/employe', async (req, res) => {
   try {
     const [results] = await db.query('SELECT * FROM Employe');
     if (results.length > 0) {
@@ -209,6 +209,42 @@ app.get('/api/chapitres/:chapitreId/exercices', async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la récupération des exercices." });
   }
 });
+
+// Après les autres routes
+app.post('/verify-query', async (req, res) => {
+  const { QuestionID, UserQuery } = req.body;
+
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Utilisateur non connecté." });
+  }
+
+  try {
+    const [question] = await db.query('SELECT CorrectQuery FROM Questions WHERE QuestionID = ?', [QuestionID]);
+
+    if (question.length > 0) {
+      const isCorrect = UserQuery === question[0].CorrectQuery;
+
+      if (isCorrect) {
+        // Si la requête est correcte, insérer la réponse dans la table `users response`
+        const [insertResponse] = await db.query(
+            'INSERT INTO `userresponses` (UserID, QuestionID, UserQuery, IsCorrect, SubmissionDate) VALUES (?, ?, ?, ?, NOW())',
+            [req.session.userId, QuestionID, UserQuery, isCorrect]
+        );
+
+        return res.json({ message: "Réponse vérifiée et enregistrée.", isCorrect: true });
+      } else {
+        // Optionnel : enregistrer aussi les tentatives incorrectes
+        return res.json({ message: "Réponse incorrecte.", isCorrect: false });
+      }
+    } else {
+      return res.status(404).json({ message: "Question non trouvée." });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur lors de la vérification de la requête." });
+  }
+});
+
 
 
 
