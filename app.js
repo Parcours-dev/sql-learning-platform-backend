@@ -146,7 +146,7 @@ app.get('/user-info', async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    const [results] = await db.query('SELECT Username, Email FROM Users WHERE UserID = ?', [userId]);
+    const [results] = await db.query('SELECT Nom, Prenom, Email, NumEtudiant FROM Users WHERE UserID = ?', [userId]);
     if (results.length > 0) {
       const userInfo = results[0];
       res.json(userInfo);
@@ -158,6 +158,48 @@ app.get('/user-info', async (req, res) => {
     return res.status(500).json({ message: "Erreur lors de la récupération des informations de l'utilisateur." });
   }
 });
+
+app.post('/update-profile', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Utilisateur non connecté." });
+  }
+
+  const { prenom, nom, email, numero_etudiant } = req.body;
+  const userId = req.session.userId;
+
+  try {
+    await db.query('UPDATE Users SET Prenom = ?, Nom = ?, Email = ?, NumEtudiant = ? WHERE UserID = ?', [prenom, nom, email, numero_etudiant, userId]);
+    res.status(200).json({ message: "Informations utilisateur mises à jour avec succès." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur lors de la mise à jour des informations de l'utilisateur." });
+  }
+});
+
+
+// Route de suppression du compte
+app.delete('/delete-account', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Utilisateur non connecté." });
+  }
+
+  const userId = req.session.userId;
+
+  try {
+    await db.query('DELETE FROM Users WHERE UserID = ?', [userId]);
+    req.session.destroy(); // Détruire la session après la suppression du compte
+    res.status(200).json({ message: "Compte supprimé avec succès." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur lors de la suppression du compte." });
+  }
+});
+
+
+
+
+
+
 
 
 
