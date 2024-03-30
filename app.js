@@ -265,6 +265,25 @@ app.get('/questions/:questionId/indice', async (req, res) => {
   }
 });
 
+
+// Récupération de la progression de l'utilisateur
+app.get('/api/progression/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const resultat = await db.query(`
+      SELECT QuestionID FROM userresponses
+      WHERE UserID = ? AND IsCorrect = TRUE
+      ORDER BY QuestionID DESC
+      LIMIT 1
+    `, [userId]);
+
+    res.json(resultat.length > 0 ? resultat[0] : { QuestionID: null });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la récupération de la progression." });
+  }
+});
+
+
 // Routes
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
