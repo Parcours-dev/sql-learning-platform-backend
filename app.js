@@ -245,8 +245,25 @@ app.post('/verify-query', async (req, res) => {
   }
 });
 
+// Route pour obtenir l'indice d'une question
+app.get('/questions/:questionId/indice', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Utilisateur non connecté." });
+  }
 
-
+  const { questionId } = req.params;
+  try {
+    const [result] = await db.query('SELECT Instructions FROM Questions WHERE QuestionID = ?', [questionId]);
+    if (result.length > 0) {
+      res.json({ indice: result[0].Instructions });
+    } else {
+      res.status(404).json({ message: "Question non trouvée." });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la récupération de l'indice." });
+  }
+});
 
 // Routes
 var indexRouter = require('./routes/index');
