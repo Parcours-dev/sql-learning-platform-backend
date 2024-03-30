@@ -61,7 +61,8 @@ app.post('/login', async (req, res) => {
       const comparison = await bcrypt.compare(password, user.PasswordHash);
       if (comparison) {
         req.session.userId = user.UserID;
-        return res.status(200).json({ message: "Authentification réussie" });
+        // Inclure l'ID de l'utilisateur dans la réponse
+        return res.status(200).json({ message: "Authentification réussie", userId: user.UserID });
       }
     }
     return res.status(401).json({ message: "Identifiants invalides" });
@@ -267,8 +268,13 @@ app.get('/questions/:questionId/indice', async (req, res) => {
 
 
 // Récupération de la progression de l'utilisateur
-app.get('/api/progression/:userId', async (req, res) => {
-  const { userId } = req.params;
+// Récupération de la progression de l'utilisateur
+app.get('/api/progression', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Utilisateur non connecté." });
+  }
+
+  const userId = req.session.userId; // Utilisez l'ID de l'utilisateur à partir de la session
   try {
     const resultat = await db.query(`
       SELECT QuestionID FROM userresponses
