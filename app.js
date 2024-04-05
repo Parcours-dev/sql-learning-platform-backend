@@ -253,19 +253,34 @@ app.get('/api/chapitres/:chapitreId/exercices', async (req, res) => {
   }
 });
 
-// Après les autres routes
 app.post('/verify-query', async (req, res) => {
   const { QuestionID, UserQuery } = req.body;
 
   if (!req.session.userId) {
     return res.status(401).json({ message: "Utilisateur non connecté." });
   }
+  // Validation pour s'assurer que la requête commence par SELECT
+  if (!UserQuery.trim().toLowerCase().startsWith('select')) {
+    return res.status(400).json({ message: "Seules les requêtes SELECT sont autorisées." });
+  }
+
+  // Validation pour s'assurer que la requête se termine par ";"
+  if (!UserQuery.trim().endsWith(';')) {
+    return res.json({ message: "Réponse incorrecte.", isCorrect: false });  }
+
 
   try {
     const [question] = await db.query('SELECT CorrectQuery FROM Questions WHERE QuestionID = ?', [QuestionID]);
 
     if (question.length > 0) {
-      const isCorrect = UserQuery === question[0].CorrectQuery;
+      // Exécution de la requête de correction prévue
+      const [correctResults] = await db.query(question[0].CorrectQuery);
+      // Exécution de la requête de l'étudiant
+      const [userResults] = await db.query(UserQuery);
+
+      // Comparaison des jeux de données
+      // NOTE: Cette comparaison est basique et pourrait nécessiter des ajustements pour gérer différentes structures de données
+      const isCorrect = JSON.stringify(correctResults) === JSON.stringify(userResults);
 
       if (isCorrect) {
         // Si la requête est correcte, insérer la réponse dans la table `users response`
@@ -273,10 +288,9 @@ app.post('/verify-query', async (req, res) => {
             'INSERT INTO `userresponses` (UserID, QuestionID, UserQuery, IsCorrect, SubmissionDate) VALUES (?, ?, ?, ?, NOW())',
             [req.session.userId, QuestionID, UserQuery, isCorrect]
         );
-
         return res.json({ message: "Réponse vérifiée et enregistrée.", isCorrect: true });
       } else {
-        // Optionnel : enregistrer aussi les tentatives incorrectes
+        // Logique pour gérer la réponse incorrecte
         return res.json({ message: "Réponse incorrecte.", isCorrect: false });
       }
     } else {
@@ -287,6 +301,7 @@ app.post('/verify-query', async (req, res) => {
     return res.status(500).json({ message: "Erreur lors de la vérification de la requête." });
   }
 });
+
 
 // Route pour obtenir l'indice d'une question
 app.get('/questions/:questionId/indice', async (req, res) => {
