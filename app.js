@@ -25,6 +25,19 @@ app.use(session({
   cookie: { secure: 'auto' }
 }));
 
+function checkRole(requiredRole) {
+  return function(req, res, next) {
+    if (req.session.role === requiredRole) {
+      next();
+    } else {
+      res.status(403).json({ message: "Accès refusé" });
+    }
+  };
+}
+// checkRole('Admin') est un middleware qui vérifie si l'utilisateur a le rôle 'Admin'
+// Si l'utilisateur n'a pas le rôle 'Admin', il recevra une réponse 403 (Accès refusé)
+
+
 // Connexion à la base de données
 const db = mysql.createPool({
   host: process.env.DB_HOST,
@@ -61,6 +74,7 @@ app.post('/login', async (req, res) => {
       const comparison = await bcrypt.compare(password, user.PasswordHash);
       if (comparison) {
         req.session.userId = user.UserID;
+        req.session.role = user.RoleName;  // Stocker le rôle de l'utilisateur dans la session
         // Inclure l'ID de l'utilisateur dans la réponse
         return res.status(200).json({ message: "Authentification réussie", userId: user.UserID });
       }
@@ -345,6 +359,40 @@ app.get('/api/progression', async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la récupération de la progression." });
   }
 });
+
+
+
+// Route pour obtenir le pourcentage de questions résolues
+app.get('/api/progress', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Utilisateur non connecté." });
+  }
+
+  const userId = req.session.userId;
+
+  try {
+    // Compter le nombre total de questions disponibles
+    const [totalQuestions] = await db.query('SELECT COUNT(*) AS total FROM questions');
+
+    // Compter le nombre unique de questions correctement répondues par cet utilisateur
+    const [correctAnswers] = await db.query(
+        'SELECT COUNT(DISTINCT QuestionID) AS correct FROM userresponses WHERE UserID = ? AND IsCorrect = 1',
+        [userId]
+    );
+
+    // Calculer le pourcentage de questions correctement répondues par rapport au total des questions disponibles
+    const percentage = totalQuestions[0].total > 0
+        ? (correctAnswers[0].correct / totalQuestions[0].total) * 100
+        : 0; // Eviter la division par zéro si aucune question n'est disponible
+
+    res.json({ progressPercentage: Math.round(percentage) });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ message: "Erreur lors de la récupération des informations." });
+  }
+});
+
+
 
 
 // Routes
