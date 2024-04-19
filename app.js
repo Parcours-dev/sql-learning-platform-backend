@@ -242,7 +242,7 @@ app.get('/api/mcd', (req, res) => {
 // Récupération des chapitres et infos
 app.get('/api/chapitres', async (req, res) => {
   try {
-    const [results] = await db.query('SELECT ChapitreID, Nom, Description FROM Chapitre');
+    const [results] = await db.query('SELECT ChapitreID, Nom, Description FROM chapitre');
     if (results.length > 0) {
       res.json(results);
     } else {
@@ -391,6 +391,44 @@ app.get('/api/progress', async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la récupération des informations." });
   }
 });
+
+// Route pour ajouter un chapitre
+app.post('/api/addchapitres', async (req, res) => {
+  const { nom, description } = req.body;
+
+  try {
+    const result = await db.query('INSERT INTO Chapitre (Nom, Description) VALUES (?, ?)', [nom, description]);
+    res.status(201).json({ message: "Chapitre créé avec succès", chapitreId: result.insertId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la création du chapitre" });
+  }
+});
+
+
+app.post('/api/addexercices', async (req, res) => {
+  const { titre, description, correctQuery, niveau, categorie, texteQuestion, instructions, chapitreId } = req.body;
+
+  // Validation des données requises
+  if (!titre || !description || !correctQuery || !niveau || !categorie || !texteQuestion || !instructions || !chapitreId) {
+    return res.status(400).json({ message: "Tous les champs sont requis." });
+  }
+
+  try {
+    // Insertion de l'exercice dans la base de données
+    const result = await db.query(
+        'INSERT INTO Questions (Title, Description, CorrectQuery, Level, Category, QuestionText, Instructions, ChapitreID) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [titre, description, correctQuery, niveau, categorie, texteQuestion, instructions, chapitreId]
+    );
+
+    // Réponse en cas de succès
+    res.status(201).json({ message: "Exercice ajouté avec succès", questionId: result.insertId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de l'ajout de l'exercice" });
+  }
+});
+
 
 
 
