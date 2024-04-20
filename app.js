@@ -7,6 +7,7 @@ var cors = require('cors');
 var mysql = require('mysql2/promise');
 var bcrypt = require('bcryptjs');
 var session = require('express-session');
+let globalSelectedTables = [];
 require('dotenv').config();
 
 var app = express();
@@ -430,7 +431,74 @@ app.post('/api/addexercices', async (req, res) => {
 });
 
 
+app.get('/api/questions', async (req, res) => {
+  try {
+    const [results] = await db.query('SELECT * FROM Questions');
+    if (results.length > 0) {
+      res.json(results);
+    } else {
+      res.status(404).json({ message: "Aucune donnée trouvée dans la table Employe." });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur lors de la récupération des informations de la table." });
+  }
+});
 
+// Route to fetch all table names
+app.get('/api/tables', async (req, res) => {
+  try {
+    const [tables] = await db.query("SHOW TABLES");
+    // Assuming MySQL returns tables in a format like: { 'Tables_in_<database>': 'tableName' }
+    const tableNames = tables.map((table) => table[Object.keys(table)[0]]);
+
+    if (tableNames.length > 0) {
+      res.json(tableNames);
+    } else {
+      res.status(404).json({ message: "Aucune donnée trouvée dans les tables de la base de données." });
+    }
+  } catch (error) {
+    console.error('Failed to fetch table names:', error);
+    res.status(500).json({ message: "Erreur lors de la récupération des noms des tables.", error });
+  }
+});
+
+// Route to save selected table names globally
+app.post('/api/save-tables', (req, res) => {
+  const tables = req.body.tables;
+
+  // Update the global variable with the received tables
+  globalSelectedTables = tables;
+
+  res.json({ message: 'Tables saved successfully', tables: globalSelectedTables });
+});
+
+// Route pour récupérer les colonnes des tables enregistrées
+app.get('/api/columns', async (req, res) => {
+  try {
+    const columnsPerTable = {};
+
+    for (const tableName of globalSelectedTables) {
+      const [columns] = await db.query(`
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+      `, [db.database, tableName]);
+
+      columnsPerTable[tableName] = columns.map(column => column.COLUMN_NAME);
+      console.log(columnsPerTable)
+    }
+
+    if (Object.keys(columnsPerTable).length > 0) {
+      res.json(columnsPerTable);
+    } else {
+      res.status(404).json({ message: 'Aucune colonne trouvée pour les tables sélectionnées' });
+    }
+  } catch (error) {
+    console.error('Échec de récupération des noms de colonne :', error);
+    res.status(500).json({ message: "Erreur lors de la récupération des noms de colonne", error });
+  }
+});
 
 
 // Routes
