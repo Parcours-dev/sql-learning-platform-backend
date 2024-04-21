@@ -473,21 +473,25 @@ app.post('/api/save-tables', (req, res) => {
   res.json({ message: 'Tables saved successfully', tables: globalSelectedTables });
 });
 
-// Route pour récupérer les colonnes des tables enregistrées
 app.get('/api/columns', async (req, res) => {
   try {
     const columnsPerTable = {};
+
+    console.log('Tables sélectionnées:', globalSelectedTables);
 
     for (const tableName of globalSelectedTables) {
       const [columns] = await db.query(`
         SELECT COLUMN_NAME
         FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-      `, [db.database, tableName]);
+        WHERE TABLE_SCHEMA = (SELECT DATABASE()) AND TABLE_NAME = ?
+      `, [tableName]);
+
+      console.log('Colonnes pour', tableName, ':', columns);
 
       columnsPerTable[tableName] = columns.map(column => column.COLUMN_NAME);
-      console.log(columnsPerTable)
     }
+
+    console.log('Colonnes par table:', columnsPerTable);
 
     if (Object.keys(columnsPerTable).length > 0) {
       res.json(columnsPerTable);
@@ -499,6 +503,8 @@ app.get('/api/columns', async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la récupération des noms de colonne", error });
   }
 });
+
+
 
 
 // Routes
