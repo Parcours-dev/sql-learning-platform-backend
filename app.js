@@ -505,6 +505,12 @@ app.get('/api/columns', async (req, res) => {
 });
 
 
+app.get('/api/get-selected-tables', (req, res) => {
+  res.json({ tables: globalSelectedTables }); // Assurez-vous que globalSelectedTables est correctement géré
+});
+
+
+
 
 
 // Routes
