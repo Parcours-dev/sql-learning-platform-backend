@@ -510,6 +510,43 @@ app.get('/api/get-selected-tables', (req, res) => {
 });
 
 
+// Route pour modifier un chapitre existant
+app.put('/api/chapitres/:chapitreId', async (req, res) => {
+  const { chapitreId } = req.params;
+  const { nom, description } = req.body;
+
+  if (!nom || !description) {
+    return res.status(400).json({ message: "Nom et description du chapitre sont requis." });
+  }
+
+  try {
+    const result = await db.query('UPDATE Chapitre SET Nom = ?, Description = ? WHERE ChapitreID = ?', [nom, description, chapitreId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Chapitre non trouvé ou aucune modification apportée." });
+    }
+    res.status(200).json({ message: "Chapitre mis à jour avec succès." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la mise à jour du chapitre" });
+  }
+});
+
+
+// Route pour supprimer un chapitre
+app.delete('/api/deletechapitres/:chapitreId', async (req, res) => {
+  const { chapitreId } = req.params;
+
+  try {
+    const result = await db.query('DELETE FROM Chapitre WHERE ChapitreID = ?', [chapitreId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Chapitre non trouvé ou déjà supprimé." });
+    }
+    res.status(200).json({ message: "Chapitre supprimé avec succès." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la suppression du chapitre" });
+  }
+});
 
 
 
