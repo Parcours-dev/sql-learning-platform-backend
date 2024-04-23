@@ -548,6 +548,39 @@ app.delete('/api/deletechapitres/:chapitreId', async (req, res) => {
   }
 });
 
+// Route pour modifier un exercice existant
+app.put('/api/questions/:id', async (req, res) => {
+  const { id } = req.params;
+  const { titre, description, correctQuery, niveau, categorie, texteQuestion, instructions, chapitreId } = req.body;
+  try {
+    const query = 'UPDATE questions SET Title = ?, Description = ?, CorrectQuery = ?, Level = ?, Category = ?, QuestionText = ?, Instructions = ?, ChapitreID = ? WHERE QuestionID = ?';
+    const result = await db.query(query, [titre, description, correctQuery, niveau, categorie, texteQuestion, instructions, chapitreId, id]);
+    if (result[0].affectedRows === 0) {
+      return res.status(404).json({ message: "Exercice non trouvé ou aucune modification apportée." });
+    }
+    res.status(200).json({ message: "Exercice modifié avec succès" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la modification de l'exercice", error });
+  }
+});
+
+// Route pour supprimer un exercice
+app.delete('/api/deletequestions/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const query = 'DELETE FROM questions WHERE QuestionID = ?';
+    const result = await db.query(query, [id]);
+    if (result[0].affectedRows === 0) {
+      return res.status(404).json({ message: "Exercice non trouvé ou déjà supprimé." });
+    }
+    res.status(200).json({ message: "Exercice supprimé avec succès" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la suppression de l'exercice", error });
+  }
+});
+
 
 
 // Routes
