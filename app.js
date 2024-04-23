@@ -65,19 +65,22 @@ app.use((req, res, next) => {
 });
 
 
-// Route de connexion
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
-    const [results] = await db.query('SELECT * FROM Users WHERE Username = ?', [username]);
+    const [results] = await db.query('SELECT Users.*, Roles.RoleName FROM Users JOIN Roles ON Users.RoleID = Roles.RoleID WHERE Username = ?', [username]);
     if (results.length > 0) {
       const user = results[0];
       const comparison = await bcrypt.compare(password, user.PasswordHash);
       if (comparison) {
+        console.log("User role from DB:", user.RoleName); // Assurez-vous que ceci renvoie 'Admin'
         req.session.userId = user.UserID;
-        req.session.role = user.RoleName;  // Stocker le rôle de l'utilisateur dans la session
-        // Inclure l'ID de l'utilisateur dans la réponse
-        return res.status(200).json({ message: "Authentification réussie", userId: user.UserID });
+        req.session.role = user.RoleName; // Stocker le rôle dans la session
+        return res.status(200).json({
+          message: "Authentification réussie",
+          userId: user.UserID,
+          role: user.RoleName // Envoyer le nom du rôle
+        });
       }
     }
     return res.status(401).json({ message: "Identifiants invalides" });
@@ -86,6 +89,7 @@ app.post('/login', async (req, res) => {
     return res.status(500).send(error);
   }
 });
+
 
 
 // Route d'inscription
@@ -394,7 +398,7 @@ app.get('/api/progress', async (req, res) => {
 });
 
 // Route pour ajouter un chapitre
-app.post('/api/addchapitres', async (req, res) => {
+app.post('/api/addchapitres', checkRole(1),async (req, res) => {
   const { nom, description } = req.body;
 
   try {
@@ -407,7 +411,7 @@ app.post('/api/addchapitres', async (req, res) => {
 });
 
 
-app.post('/api/addexercices', async (req, res) => {
+app.post('/api/addexercices', checkRole(1),async (req, res) => {
   const { titre, description, correctQuery, niveau, categorie, texteQuestion, instructions, chapitreId } = req.body;
 
   // Validation des données requises
@@ -431,7 +435,7 @@ app.post('/api/addexercices', async (req, res) => {
 });
 
 
-app.get('/api/questions', async (req, res) => {
+app.get('/api/questions', checkRole(1),async (req, res) => {
   try {
     const [results] = await db.query('SELECT * FROM Questions');
     if (results.length > 0) {
@@ -446,7 +450,7 @@ app.get('/api/questions', async (req, res) => {
 });
 
 // Route to fetch all table names
-app.get('/api/tables', async (req, res) => {
+app.get('/api/tables', checkRole(1),async (req, res) => {
   try {
     const [tables] = await db.query("SHOW TABLES");
     // Assuming MySQL returns tables in a format like: { 'Tables_in_<database>': 'tableName' }
@@ -464,7 +468,7 @@ app.get('/api/tables', async (req, res) => {
 });
 
 // Route to save selected table names globally
-app.post('/api/save-tables', (req, res) => {
+app.post('/api/save-tables', checkRole(1),(req, res) => {
   const tables = req.body.tables;
 
   // Update the global variable with the received tables
@@ -473,7 +477,7 @@ app.post('/api/save-tables', (req, res) => {
   res.json({ message: 'Tables saved successfully', tables: globalSelectedTables });
 });
 
-app.get('/api/columns', async (req, res) => {
+app.get('/api/columns',checkRole(1), async (req, res) => {
   try {
     const columnsPerTable = {};
 
@@ -505,13 +509,13 @@ app.get('/api/columns', async (req, res) => {
 });
 
 
-app.get('/api/get-selected-tables', (req, res) => {
+app.get('/api/get-selected-tables',checkRole(1), (req, res) => {
   res.json({ tables: globalSelectedTables }); // Assurez-vous que globalSelectedTables est correctement géré
 });
 
 
 // Route pour modifier un chapitre existant
-app.put('/api/chapitres/:chapitreId', async (req, res) => {
+app.put('/api/chapitres/:chapitreId', checkRole(1),async (req, res) => {
   const { chapitreId } = req.params;
   const { nom, description } = req.body;
 
@@ -533,7 +537,7 @@ app.put('/api/chapitres/:chapitreId', async (req, res) => {
 
 
 // Route pour supprimer un chapitre
-app.delete('/api/deletechapitres/:chapitreId', async (req, res) => {
+app.delete('/api/deletechapitres/:chapitreId',checkRole(1), async (req, res) => {
   const { chapitreId } = req.params;
 
   try {
@@ -549,7 +553,7 @@ app.delete('/api/deletechapitres/:chapitreId', async (req, res) => {
 });
 
 // Route pour modifier un exercice existant
-app.put('/api/questions/:id', async (req, res) => {
+app.put('/api/questions/:id', checkRole(1), async (req, res) => {
   const { id } = req.params;
   const { titre, description, correctQuery, niveau, categorie, texteQuestion, instructions, chapitreId } = req.body;
   try {
@@ -566,7 +570,7 @@ app.put('/api/questions/:id', async (req, res) => {
 });
 
 // Route pour supprimer un exercice
-app.delete('/api/deletequestions/:id', async (req, res) => {
+app.delete('/api/deletequestions/:id', checkRole(1),async (req, res) => {
   const { id } = req.params;
   try {
     const query = 'DELETE FROM questions WHERE QuestionID = ?';
