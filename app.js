@@ -678,6 +678,57 @@ app.get('/api/least-successful-chapter', async (req, res) => {
   }
 });
 
+// Route pour obtenir le nombre de bonnes réponses par jour
+app.get('/api/daily-correct-answers', async (req, res) => {
+  try {
+    // Query pour récupérer le nombre de bonnes réponses par jour
+    const [results] = await db.query(`
+            SELECT DATE(SubmissionDate) AS date, COUNT(*) AS correctAnswers
+            FROM userresponses
+            WHERE IsCorrect = 1
+            GROUP BY DATE(SubmissionDate)
+            ORDER BY DATE(SubmissionDate);
+        `);
+    if (results.length > 0) {
+      res.json(results);
+    } else {
+      res.status(404).json({ message: "Aucune donnée trouvée pour les réponses correctes par jour." });
+    }
+  } catch (error) {
+    console.error("Error fetching daily correct answers:", error);
+    res.status(500).json({ message: "Erreur lors de la récupération des données." });
+  }
+});
+
+
+
+app.get('/api/chapter-completion', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT
+        c.ChapitreID,
+        c.Nom as chapterName,
+        (SELECT COUNT(*) FROM Questions WHERE ChapitreID = c.ChapitreID) as totalQuestions,
+        (SELECT COUNT(DISTINCT UserID) FROM UserResponses ur
+                                              JOIN Questions q ON ur.QuestionID = q.QuestionID
+         WHERE ur.IsCorrect = 1 AND q.ChapitreID = c.ChapitreID) as correctUsers
+      FROM Chapitre c
+    `);
+
+    // Calculer le pourcentage de questions résolues par chaque étudiant pour chaque chapitre
+    const completionData = results.map(item => ({
+      chapterId: item.ChapitreID,
+      chapterName: item.chapterName,
+      completionPercentage: item.totalQuestions ? Math.round((item.correctUsers / item.totalQuestions) * 100) : 0
+    }));
+
+    res.json(completionData);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Error retrieving chapter data." });
+  }
+});
+
 
 
 // Routes
