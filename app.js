@@ -585,6 +585,99 @@ app.delete('/api/deletequestions/:id', checkRole("Admin"),async (req, res) => {
   }
 });
 
+// Route pour obtenir l'étudiant avec le plus de réponses correctes
+app.get('/api/top-student', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT u.Nom, u.Prenom, COUNT(*) AS CorrectAnswers
+      FROM Users u
+      JOIN userresponses ur ON u.UserID = ur.UserID
+      WHERE ur.IsCorrect = 1
+      GROUP BY u.UserID
+      ORDER BY CorrectAnswers DESC
+      LIMIT 1;
+    `);
+    if (results.length > 0) {
+      res.json(results[0]);
+    } else {
+      res.status(404).json({ message: "Aucun étudiant trouvé." });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la récupération des informations." });
+  }
+});
+
+
+app.get('/api/least-successful-student', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT u.Nom, u.Prenom, COUNT(*) AS CorrectAnswersCount
+      FROM Users u
+      JOIN userresponses ur ON u.UserID = ur.UserID
+      WHERE ur.IsCorrect = 1
+      GROUP BY u.UserID
+      ORDER BY CorrectAnswersCount ASC
+      LIMIT 1;
+    `);
+    if (results.length > 0) {
+      res.json(results[0]);
+    } else {
+      res.status(404).json({ message: "Aucun étudiant trouvé." });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la récupération des informations." });
+  }
+});
+
+
+app.get('/api/most-successful-chapter', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT c.Nom as ChapterName, COUNT(ur.ResponseID) as CorrectAnswersCount
+      FROM Chapitre c
+      JOIN Questions q ON c.ChapitreID = q.ChapitreID
+      JOIN userresponses ur ON q.QuestionID = ur.QuestionID
+      WHERE ur.IsCorrect = 1
+      GROUP BY c.ChapitreID
+      ORDER BY CorrectAnswersCount DESC
+      LIMIT 1;
+    `);
+    if (results.length > 0) {
+      res.json(results[0]);
+    } else {
+      res.status(404).json({ message: "Aucun chapitre trouvé avec des réponses correctes." });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la récupération des informations du chapitre." });
+  }
+});
+
+app.get('/api/least-successful-chapter', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT c.Nom as ChapterName, COUNT(ur.ResponseID) as CorrectAnswersCount
+      FROM Chapitre c
+      JOIN Questions q ON c.ChapitreID = q.ChapitreID
+      JOIN userresponses ur ON q.QuestionID = ur.QuestionID
+      WHERE ur.IsCorrect = 1
+      GROUP BY c.ChapitreID
+      ORDER BY CorrectAnswersCount ASC
+      LIMIT 1;
+    `);
+    if (results.length > 0) {
+      res.json(results[0]);
+    } else {
+      res.status(404).json({ message: "Aucun chapitre trouvé avec des réponses correctes." });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la récupération des informations du chapitre." });
+  }
+});
+
 
 
 // Routes
