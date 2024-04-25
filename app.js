@@ -731,6 +731,60 @@ app.get('/api/chapter-completion', async (req, res) => {
 
 
 
+app.get('/api/last-good-responses', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT
+        u.Nom,
+        u.Prenom,
+        q.Title AS QuestionTitle,
+        q.ChapitreID AS ChapterNumber,
+        ur.SubmissionDate AS LastGoodResponse
+      FROM
+        userresponses ur
+          JOIN
+        users u ON ur.UserID = u.UserID
+          JOIN
+        questions q ON ur.QuestionID = q.QuestionID
+      WHERE
+        ur.IsCorrect = 1
+      GROUP BY
+        u.UserID, q.QuestionID
+      ORDER BY
+        ur.SubmissionDate DESC
+        LIMIT 6;
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching last good responses:", error);
+    res.status(500).json({ message: "Erreur lors de la récupération des données." });
+  }
+});
+
+
+app.get('/api/user-ranking', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT u.UserID, u.Nom, u.Prenom, COUNT(ur.ResponseID) AS BonnesReponses
+      FROM users u
+      LEFT JOIN userresponses ur ON u.UserID = ur.UserID AND ur.IsCorrect = 1
+      GROUP BY u.UserID
+      ORDER BY BonnesReponses DESC, u.Nom, u.Prenom
+    `);
+    res.json(results.map((item, index) => ({
+      ...item,
+      Rang: index + 1,
+      NomComplet: `${item.Nom} ${item.Prenom}`
+    })));
+  } catch (error) {
+    console.error("Error fetching user ranking:", error);
+    res.status(500).json({ message: "Erreur lors de la récupération des données." });
+  }
+});
+
+
+
+
 // Routes
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
