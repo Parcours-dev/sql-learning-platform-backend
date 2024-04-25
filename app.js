@@ -783,6 +783,22 @@ app.get('/api/user-ranking', async (req, res) => {
 });
 
 
+const Parser = require('rss-parser');
+const parser = new Parser();
+
+app.get('/api/news', async (req, res) => {
+  try {
+    const feed = await parser.parseURL('http://feeds.feedburner.com/sql-sh');
+    res.json(feed.items); // renvoie les articles en tant que JSON
+  } catch (error) {
+    console.error(error);
+    // Envoyer l'erreur complète peut aider au débogage
+    res.status(500).send(`Error fetching news: ${error.message}`);
+  }
+});
+
+
+
 
 
 // Routes
