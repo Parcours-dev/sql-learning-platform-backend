@@ -49,7 +49,8 @@ const db = mysql.createPool({
     port: process.env.DB_PORT,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    multipleStatements: true // Active les requêtes multiples
 });
 
 
@@ -473,33 +474,52 @@ app.post('/api/save-tables', checkRole("Admin"), (req, res) => {
 
 app.get('/api/columns', checkRole("Admin"), async (req, res) => {
     try {
-        const columnsPerTable = {};
+        const tableDetails = {};
 
         console.log('Tables sélectionnées:', globalSelectedTables);
 
         for (const tableName of globalSelectedTables) {
-            const [columns] = await db.query(`
-                SELECT COLUMN_NAME
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_SCHEMA = (SELECT DATABASE())
-                  AND TABLE_NAME = ?
-            `, [tableName]);
+            const columnsQuery = `
+        SELECT COLUMN_NAME, COLUMN_KEY, EXTRA, COLUMN_TYPE, IS_NULLABLE
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = (SELECT DATABASE())
+          AND TABLE_NAME = ?;
+    `;
+            const constraintsQuery = `
+        SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+        WHERE TABLE_SCHEMA = (SELECT DATABASE())
+          AND TABLE_NAME = ?;
+    `;
 
-            console.log('Colonnes pour', tableName, ':', columns);
+            const [columns] = await db.query(columnsQuery, [tableName]);
+            const [constraints] = await db.query(constraintsQuery, [tableName]);
 
-            columnsPerTable[tableName] = columns.map(column => column.COLUMN_NAME);
+            console.log('Détails pour', tableName, ':', columns, constraints);
+
+            tableDetails[tableName] = {
+                columns: columns.map(column => ({
+                    name: column.COLUMN_NAME,
+                    key: column.COLUMN_KEY,
+                    type: column.COLUMN_TYPE,
+                    nullable: column.IS_NULLABLE,
+                    extra: column.EXTRA
+                })),
+                constraints: constraints
+            };
         }
 
-        console.log('Colonnes par table:', columnsPerTable);
 
-        if (Object.keys(columnsPerTable).length > 0) {
-            res.json(columnsPerTable);
+        console.log('Détails par table:', tableDetails);
+
+        if (Object.keys(tableDetails).length > 0) {
+            res.json(tableDetails);
         } else {
-            res.status(404).json({message: 'Aucune colonne trouvée pour les tables sélectionnées'});
+            res.status(404).json({message: 'Aucun détail trouvé pour les tables sélectionnées'});
         }
     } catch (error) {
-        console.error('Échec de récupération des noms de colonne :', error);
-        res.status(500).json({message: "Erreur lors de la récupération des noms de colonne", error});
+        console.error('Échec de récupération des détails de la table :', error);
+        res.status(500).json({message: "Erreur lors de la récupération des détails de la table", error});
     }
 });
 
@@ -682,6 +702,7 @@ app.get('/api/daily-correct-answers', async (req, res) => {
         `);
         if (results.length > 0) {
             res.json(results);
+            console.log(results)
         } else {
             res.status(404).json({message: "Aucune donnée trouvée pour les réponses correctes par jour."});
         }
