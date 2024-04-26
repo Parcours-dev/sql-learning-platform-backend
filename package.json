@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "swagger": "node ./swagger.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -19,6 +19,10 @@
     "mysql": "^2.18.1",
     "mysql2": "^3.9.1",
     "pug": "2.0.0-beta11",
-    "rss-parser": "^3.13.0"
+    "rss-parser": "^3.13.0",
+    "swagger-ui-express": "^5.0.0"
+  },
+  "devDependencies": {
+    "swagger-autogen": "^2.23.7"
   }
 }
