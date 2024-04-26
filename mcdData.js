@@ -74,5 +74,6 @@ const mcd = {
                 ]
             }
         ]
-    }};
+    }
+};
 module.exports = mcd;
