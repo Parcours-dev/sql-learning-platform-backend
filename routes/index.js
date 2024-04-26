@@ -6,7 +6,7 @@ var router = express.Router();
 router.get('/test', (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    res.json({message: 'Ta grand mère fdp'});
+    res.json({message: 'Ceci est la première information de l\'API !'});
 });
 
 module.exports = router;

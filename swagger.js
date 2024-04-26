@@ -3,7 +3,7 @@ const swaggerAutogen = require('swagger-autogen')();
 const doc = {
     info: {
         title: 'ExpressJS API - BabbelSQL',
-        description: 'Description'
+        description: 'Présentation des différentes routes du projet.'
     },
     host: 'localhost:3000'
 };
