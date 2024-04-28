@@ -8,18 +8,9 @@ var mysql = require('mysql2/promise');
 var bcrypt = require('bcryptjs');
 var session = require('express-session');
 let globalSelectedTables = [];
-const swaggerUi = require('swagger-ui-express')
-const swaggerFile = require('./swagger-output.json')
-
-
 require('dotenv').config();
 
 var app = express();
-
-
-
-app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile))
-
 
 // Configuration CORS pour supporter les credentials
 app.use(cors({
@@ -489,17 +480,17 @@ app.get('/api/columns', checkRole("Admin"), async (req, res) => {
 
         for (const tableName of globalSelectedTables) {
             const columnsQuery = `
-        SELECT COLUMN_NAME, COLUMN_KEY, EXTRA, COLUMN_TYPE, IS_NULLABLE
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = (SELECT DATABASE())
-          AND TABLE_NAME = ?;
-    `;
+                SELECT COLUMN_NAME, COLUMN_KEY, EXTRA, COLUMN_TYPE, IS_NULLABLE
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = (SELECT DATABASE())
+                  AND TABLE_NAME = ?;
+            `;
             const constraintsQuery = `
-        SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
-        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-        WHERE TABLE_SCHEMA = (SELECT DATABASE())
-          AND TABLE_NAME = ?;
-    `;
+                SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = (SELECT DATABASE())
+                  AND TABLE_NAME = ?;
+            `;
 
             const [columns] = await db.query(columnsQuery, [tableName]);
             const [constraints] = await db.query(constraintsQuery, [tableName]);
