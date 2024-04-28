@@ -95,25 +95,36 @@ app.post('/login', async (req, res) => {
 
 // Route d'inscription
 app.post('/register', async (req, res) => {
-    const {username, email, password} = req.body;
+    const { username, nom, prenom, numEtudiant, email, password } = req.body;
 
     if (!username || !email || !password) {
-        return res.status(400).json({message: "Tous les champs sont requis."});
+        return res.status(400).json({ message: "Tous les champs sont requis." });
     }
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
+        const registrationDate = new Date().toISOString().slice(0, 19).replace('T', ' '); // Format for SQL datetime
+        const defaultRoleID = 2; // Assuming '2' is a valid default RoleID for new users
 
-        db.query('INSERT INTO Users (Username, Email, PasswordHash) VALUES (?, ?, ?)', [username, email, hashedPassword], (err, results) => {
+        const sql = `
+            INSERT INTO users (Username, Nom, Prenom, NumEtudiant, Email, PasswordHash, RegistrationDate, RoleID)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const values = [username, nom, prenom, numEtudiant, email, hashedPassword, registrationDate, defaultRoleID];
+
+        db.query(sql, values, (err, results) => {
             if (err) {
-                return res.status(500).json({message: "Erreur lors de la création de l'utilisateur."});
+                console.error(err);  // Log the error for debugging purposes
+                return res.status(500).json({ message: "Erreur lors de la création de l'utilisateur." });
             }
-            res.status(201).json({message: "Utilisateur créé avec succès."});
+            res.status(201).json({ message: "Utilisateur créé avec succès." });
         });
     } catch (error) {
-        return res.status(500).json({message: "Erreur lors du traitement de la demande."});
+        console.error(error);  // Log the error for debugging purposes
+        return res.status(500).json({ message: "Erreur lors du traitement de la demande." });
     }
 });
+
 
 // Route de mise à jour du mot de passe
 app.post('/updatemdpuser', async (req, res) => {
