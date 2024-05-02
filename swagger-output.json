@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "ExpressJS API - BabbelSQL",
-    "description": "Description",
+    "description": "Présentation des différentes routes du projet.",
     "version": "1.0.0"
   },
   "host": "localhost:3000",
@@ -55,6 +55,15 @@
               "type": "object",
               "properties": {
                 "username": {
+                  "example": "any"
+                },
+                "nom": {
+                  "example": "any"
+                },
+                "prenom": {
+                  "example": "any"
+                },
+                "numEtudiant": {
                   "example": "any"
                 },
                 "email": {

@@ -8,9 +8,13 @@ var mysql = require('mysql2/promise');
 var bcrypt = require('bcryptjs');
 var session = require('express-session');
 let globalSelectedTables = [];
+const swaggerUi = require('swagger-ui-express')
+const swaggerFile = require('./swagger-output.json')
+
 require('dotenv').config();
 
 var app = express();
+app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile))
 
 // Configuration CORS pour supporter les credentials
 app.use(cors({
